@@ -419,8 +419,7 @@ function atualizarMapa(){
                         quartis
                     );
                 }
-                // APS com escala própria
-                else if(
+                if(
                     indicadorAtual === 'DadosAPS_A' ||
                     indicadorAtual === 'DadosAPS_S' ||
                     indicadorAtual === 'DadosAPS_E'
@@ -430,13 +429,21 @@ function atualizarMapa(){
                         dado[indicadorAtual]
                     );
                 }
+                // Indicadores numéricos
+                else if(numerico){
+                    cor =
+                    getColorQuartil(
+                        dado[indicadorAtual],
+                        quartis
+                    );
+                }
                 // Qualquer variável categórica
                 else{
                     cor =
                     getColorCategoria(
                         dado[indicadorAtual]
                     );
-                }                return {
+                }           return {
 
                     fillColor:cor,
 
