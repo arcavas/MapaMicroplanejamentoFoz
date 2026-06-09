@@ -287,36 +287,40 @@ function getColorAPS(valor){
 
 function getColorCategoria(valor){
 
-    const cores = {
+    const categorias =
 
-        '5-9':'#e41a1c',
-        '10-14':'#377eb8',
-        '15-19':'#4daf4a',
-        '20-24':'#984ea3',
-        '25-29':'#ff7f00',
-        '30-34':'#ffff33',
-        '35-39':'#a65628',
-        '40-44':'#f781bf'
+        [...new Set(
 
-    };
+            Object.values(indicadores)
+            .map(
+                d => d[indicadorAtual]
+            )
 
-    return cores[valor] || '#999999';
+        )];
 
-}
-    
-function getColorCategoria(valor){
+    const paleta = [
 
-    const cores = {
+        '#1f78b4',
+        '#33a02c',
+        '#e31a1c',
+        '#ff7f00',
+        '#6a3d9a',
+        '#b15928',
+        '#a6cee3',
+        '#fb9a99',
+        '#cab2d6',
+        '#fdbf6f',
+        '#b2df8a',
+        '#ffff99'
 
-        'NORTE' : '#1f78b4',
-        'SUL'   : '#e31a1c',
-        'LESTE' : '#33a02c',
-        'OESTE' : '#ff7f00',
-        'CENTRO': '#6a3d9a'
+    ];
 
-    };
+    const indice =
+        categorias.indexOf(valor);
 
-    return cores[valor] || '#999999';
+    return paleta[
+        indice % paleta.length
+    ];
 
 }
 
