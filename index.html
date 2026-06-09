@@ -299,21 +299,10 @@ function getColorCategoria(valor){
         )];
 
     const paleta = [
-
-        '#1f78b4',
-        '#33a02c',
-        '#e31a1c',
-        '#ff7f00',
-        '#6a3d9a',
-        '#b15928',
-        '#a6cee3',
-        '#fb9a99',
-        '#cab2d6',
-        '#fdbf6f',
-        '#b2df8a',
-        '#ffff99'
-
-    ];
+    '#1f78b4','#33a02c','#e31a1c','#ff7f00','#6a3d9a',
+    '#a6cee3','#b2df8a','#fb9a99','#fdbf6f','#cab2d6',
+    '#ffff99','#b15928'
+];
 
     const indice =
         categorias.indexOf(valor);
@@ -422,54 +411,32 @@ function atualizarMapa(){
 
                 let cor;
 
-                // Indicadores APS
-                if(
-                    indicadorAtual === 'DadosAPS_A' ||
-                    indicadorAtual === 'DadosAPS_S' ||
-                    indicadorAtual === 'DadosAPS_E'
-                ){
-
-                    cor =
-                    getColorAPS(
-                        dado[indicadorAtual]
-                    );
-
-                }
-
-                // Faixa etária
-                else if(
-                    indicadorAtual === 'DadosAPS_F'
-                ){
-
-                    cor =
-                    getColorCategoria(
-                        dado[indicadorAtual]
-                    );
-
-                }
-
-                // Indicadores numéricos
-                else if(
-                    numerico
-                ){
-
+               // Indicadores numéricos
+                if(numerico){
                     cor =
                     getColorQuartil(
                         dado[indicadorAtual],
                         quartis
                     );
-
                 }
-
-                // Fallback
-                else{
-
+                // APS com escala própria
+                else if(
+                    indicadorAtual === 'DadosAPS_A' ||
+                    indicadorAtual === 'DadosAPS_S' ||
+                    indicadorAtual === 'DadosAPS_E'
+                ){
                     cor =
-                    '#999999';
-
+                    getColorAPS(
+                        dado[indicadorAtual]
+                    );
                 }
-
-                return {
+                // Qualquer variável categórica
+                else{
+                    cor =
+                    getColorCategoria(
+                        dado[indicadorAtual]
+                    );
+                }                return {
 
                     fillColor:cor,
 
