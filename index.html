@@ -303,7 +303,22 @@ function getColorCategoria(valor){
     return cores[valor] || '#999999';
 
 }
+    
+function getColorCategoria(valor){
 
+    const cores = {
+
+        'NORTE' : '#1f78b4',
+        'SUL'   : '#e31a1c',
+        'LESTE' : '#33a02c',
+        'OESTE' : '#ff7f00',
+        'CENTRO': '#6a3d9a'
+
+    };
+
+    return cores[valor] || '#999999';
+
+}
 
 // LEGENDA
 
