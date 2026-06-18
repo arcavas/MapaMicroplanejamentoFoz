@@ -1,405 +1,638 @@
-<!DOCTYPE html>
-<html lang="pt-br">
+    <!DOCTYPE html>
+    <html lang="pt-br">
 
-<head>
+    <head>
 
-<meta charset="utf-8">
+    <meta charset="utf-8">
 
-<title>Microplanejamento Vacinal - Foz do Iguaçu</title>
+    <title>Microplanejamento Vacinal - Foz do Iguaçu</title>
 
-<link rel="stylesheet"
-href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    <link rel="stylesheet"
+    href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
-<style>
-#legenda{
+    <style>
+    #legenda{
 
-    margin-top:10px;
+        margin-top:10px;
 
-    background:white;
+        background:white;
 
-    padding:6px;
+        padding:6px;
 
-    border-radius:4px;
+        border-radius:4px;
 
-    font-size:12px;
+        font-size:12px;
 
-    color:black;
+        color:black;
 
-    max-width:220px;
+        max-width:220px;
 
-}
+    }
 
-.item-legenda{
+    .item-legenda{
 
-    margin-bottom:3px;
+        margin-bottom:3px;
 
-}
+    }
 
-.cor{
+    .cor{
 
-    display:inline-block;
+        display:inline-block;
 
-    width:14px;
+        width:14px;
 
-    height:14px;
+        height:14px;
 
-    margin-right:5px;
+        margin-right:5px;
 
-    border:1px solid #333;
+        border:1px solid #333;
 
-}
+    }
 
-html, body{
-    margin:0;
-    height:100%;
-}
+    html, body{
+        margin:0;
+        height:100%;
+    }
 
-#map{
-    height:100%;
-}
+    #map{
+        height:100%;
+    }
 
-#controle{
+    #controle{
 
-    position:absolute;
+        position:absolute;
 
-    top:10px;
-    left:50px;
+        top:10px;
+        left:50px;
 
-    z-index:1000;
+        z-index:1000;
 
-    background:rgb(66, 79, 157);
+        background:rgb(66, 79, 157);
 
-    padding:10px;
+        padding:10px;
 
-    border-radius:5px;
+        border-radius:5px;
 
-    box-shadow:0 0 5px rgba(0,0,0,0.3);
+        box-shadow:0 0 5px rgba(0,0,0,0.3);
 
-}
+    }
 
-#indicador{
+    #indicador{
 
-    min-width:220px;
+        min-width:220px;
 
-    font-size:14px;
+        font-size:14px;
 
-    padding:5px;
+        padding:5px;
 
-}
+    }
 
-</style>
+    </style>
 
-</head>
+    </head>
 
-<body>
+    <body>
 
-<div id="controle">
+    <div id="controle">
 
-<select id="indicador">
-<option>Carregando...</option>
-</select>
+    <select id="indicador">
+    <option>Carregando...</option>
+    </select>
 
-<div id="legenda"></div>
+    <div id="legenda"></div>
 
-</div>
+    </div>
 
-<div id="map"></div>
+    <div id="map"></div>
 
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
-<script>
+    <script>
 
-// ======================================
-// CONFIGURAÇÕES
-// ======================================
+    // ======================================
+    // CONFIGURAÇÕES
+    // ======================================
 
-const csvUrl =
-'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ83nMaB8cLLAZEwAicEhPeiuVPd89zsqMrS4T6-BtLNIYsH7LsU2jafFd4_OIDoULHl0Vv6raOBEG3/pub?gid=1960672355&single=true&output=csv';
+    const csvUrl =
+    'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ83nMaB8cLLAZEwAicEhPeiuVPd89zsqMrS4T6-BtLNIYsH7LsU2jafFd4_OIDoULHl0Vv6raOBEG3/pub?gid=1960672355&single=true&output=csv';
 
-const geojsonUrl =
-'ubsmicroplanejamentogeojson_clean.geojson';
+    const geojsonUrl =
+    'ubsmicroplanejamentogeojson_clean.geojson';
 
-// ======================================
-// MAPA
-// ======================================
+    // Nomes das colunas que recebem tratamento especial
+    // (precisam bater exatamente com o cabeçalho da planilha)
+    const INDICADOR_ABANDONO = 'Abandono Vacinal';
+    const INDICADOR_FAIXA_ETARIA = 'Faixa etária';
+    const INDICADORES_SCORE = ['Score Taxa de Abandono', 'Score Bolsa Família'];
 
-const map =
-L.map('map').setView(
-    [-25.54,-54.58],
-    11
-);
+    // ======================================
+    // MAPA
+    // ======================================
 
-L.tileLayer(
-'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-{
- attribution:'© OpenStreetMap'
-}
-).addTo(map);
-
-// ======================================
-// VARIÁVEIS GLOBAIS
-// ======================================
-
-let indicadores = {};
-
-let geojsonData = null;
-
-let camadaUBS = null;
-
-let indicadorAtual = null;
-
-// ======================================
-// IDENTIFICAR SE É NUMÉRICO
-// ======================================
-
-function ehNumerico(indicador){
-
-    const primeiro =
-        Object.values(indicadores)[0];
-
-    if(!primeiro)
-        return false;
-
-    const valor =
-        primeiro[indicador];
-
-    return !isNaN(
-        parseFloat(
-            String(valor)
-            .replace(",",".")
-        )
+    const map =
+    L.map('map').setView(
+        [-25.54,-54.58],
+        11
     );
 
-}
+    L.tileLayer(
+    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {
+    attribution:'© OpenStreetMap'
+    }
+    ).addTo(map);
 
-// ======================================
-// QUARTIS
-// ======================================
+    // ======================================
+    // VARIÁVEIS GLOBAIS
+    // ======================================
 
-function calcularQuartis(indicador){
+    let indicadores = {};
 
-    let valores = [];
+    let geojsonData = null;
 
-    Object.values(indicadores)
-    .forEach(row => {
+    let camadaUBS = null;
 
-        let valor =
+    let indicadorAtual = null;
+
+    let quartisAtual = null; // guarda os quartis calculados, usado pelo mapa e pela legenda
+
+    let quartisAbandonoAtual = null; // quartis (calculados só com valores positivos) do Abandono Vacinal, usado pelo mapa e pela legenda
+
+    // ======================================
+    // IDENTIFICAR SE É NUMÉRICO
+    // ======================================
+
+    function ehNumerico(indicador){
+
+        const primeiro =
+            Object.values(indicadores)[0];
+
+        if(!primeiro)
+            return false;
+
+        const valor =
+            primeiro[indicador];
+
+        return !isNaN(
             parseFloat(
-                String(
-                    row[indicador]
-                ).replace(",",".")
-            );
-
-        if(!isNaN(valor))
-            valores.push(valor);
-
-    });
-
-    valores.sort(
-        (a,b)=>a-b
-    );
-
-    return {
-
-        q1:
-        valores[
-            Math.floor(
-                valores.length * 0.25
+                String(valor)
+                .replace(",",".")
             )
-        ],
-
-        q2:
-        valores[
-            Math.floor(
-                valores.length * 0.50
-            )
-        ],
-
-        q3:
-        valores[
-            Math.floor(
-                valores.length * 0.75
-            )
-        ]
-
-    };
-
-}
-
-// ======================================
-// CORES NUMÉRICAS
-// ======================================
-
-function getColorQuartil(
-    valor,
-    quartis
-){
-
-    valor =
-        parseFloat(
-            String(valor)
-            .replace(",",".")
         );
 
-    if(isNaN(valor))
-        return '#cccccc';
+    }
 
-    return valor <= quartis.q1
-        ? '#ffffcc'
-        : valor <= quartis.q2
-        ? '#a1dab4'
-        : valor <= quartis.q3
-        ? '#41b6c4'
-        : '#225ea8';
+    // ======================================
+    // QUARTIS
+    // ======================================
 
-}
-function getColorAPS(valor){
+    function calcularQuartis(indicador){
 
-    valor =
-        parseFloat(
-            String(valor)
-            .replace(",",".")
+        let valores = [];
+
+        Object.values(indicadores)
+        .forEach(row => {
+
+            let valor =
+                parseFloat(
+                    String(
+                        row[indicador]
+                    ).replace(",",".")
+                );
+
+            if(!isNaN(valor))
+                valores.push(valor);
+
+        });
+
+        valores.sort(
+            (a,b)=>a-b
         );
 
-    if(isNaN(valor))
-        return '#cccccc';
+        return {
 
-    if(valor < 60)
-        return '#d73027';
+            q1:
+            valores[
+                Math.floor(
+                    valores.length * 0.25
+                )
+            ],
 
-    if(valor < 80)
-        return '#fc8d59';
+            q2:
+            valores[
+                Math.floor(
+                    valores.length * 0.50
+                )
+            ],
 
-    if(valor < 90)
-        return '#fee08b';
+            q3:
+            valores[
+                Math.floor(
+                    valores.length * 0.75
+                )
+            ]
 
-    if(valor < 95)
-        return '#91bfdb';
+        };
 
-    return '#1a9850';
+    }
 
-}
-// ======================================
-// CORES CATEGÓRICAS
-// ======================================
+    // ======================================
+    // CORES NUMÉRICAS GENÉRICAS (quartis, amarelo->azul)
+    // usado para indicadores numéricos "neutros" como
+    // Saneamento Básica, Esgoto, Bolsa família, Pop_IBGE_SMFI
+    // ======================================
 
-function getColorCategoria(valor){
-
-    const categorias =
-
-        [...new Set(
-
-            Object.values(indicadores)
-            .map(
-                d => d[indicadorAtual]
-            )
-
-        )];
-
-    const paleta = [
-    '#1f78b4','#33a02c','#e31a1c','#ff7f00','#6a3d9a',
-    '#a6cee3','#b2df8a','#fb9a99','#fdbf6f','#cab2d6',
-    '#ffff99','#b15928'
-];
-
-    const indice =
-        categorias.indexOf(valor);
-
-    return paleta[
-        indice % paleta.length
-    ];
-
-}
-
-// LEGENDA
-
-function atualizarLegenda(){
-
-    let html = '';
-
-    if(
-        indicadorAtual === 'DadosAPS_A' ||
-        indicadorAtual === 'DadosAPS_S' ||
-        indicadorAtual === 'DadosAPS_E'
+    function getColorQuartil(
+        valor,
+        quartis
     ){
 
-        html += '<div class="item-legenda"><span class="cor" style="background:#d73027"></span><60%</div>';
-        html += '<div class="item-legenda"><span class="cor" style="background:#fc8d59"></span>60-79%</div>';
-        html += '<div class="item-legenda"><span class="cor" style="background:#fee08b"></span>80-89%</div>';
-        html += '<div class="item-legenda"><span class="cor" style="background:#91bfdb"></span>90-94%</div>';
-        html += '<div class="item-legenda"><span class="cor" style="background:#1a9850"></span>≥95%</div>';
+        valor =
+            parseFloat(
+                String(valor)
+                .replace(",",".")
+            );
+
+        if(isNaN(valor))
+            return '#cccccc';
+
+        return valor <= quartis.q1
+            ? '#ffffcc'
+            : valor <= quartis.q2
+            ? '#a1dab4'
+            : valor <= quartis.q3
+            ? '#41b6c4'
+            : '#225ea8';
 
     }
 
-    else if(indicadorAtual === 'DadosAPS_F'){
+    // ======================================
+    // ESCALA VERMELHA (menos vermelho -> mais vermelho)
+    // usada no Abandono Vacinal (quartis) e nos Scores (valor fixo)
+    // ======================================
 
-        html = 'Faixas etárias';
+    const ESCALA_VERMELHA = ['#fee5d9', '#fcae91', '#fb6a4a', '#a50f15'];
 
-    }
+    // Abandono vacinal: 0 é o ponto de corte.
+    // <= 0  -> não há abandono vacinal (cor neutra, fora da escala vermelha)
+    // > 0   -> há abandono; a intensidade do vermelho segue quartis,
+    //          calculados usando SOMENTE os valores positivos da planilha
 
-    else{
+    const COR_SEM_ABANDONO = '#ffffff'; // valor <= 0
 
-        html = 'Escala por quartis';
+    // Quartis calculados apenas com valores > 0 (negativos e zero não contam)
+    function calcularQuartisPositivos(indicador){
 
-    }
+        let valores = [];
 
-    document
-    .getElementById('legenda')
-    .innerHTML = html;
+        Object.values(indicadores)
+        .forEach(row => {
 
-}
+            let valor =
+                parseFloat(
+                    String(row[indicador])
+                    .replace(",",".")
+                );
 
-// ======================================
-// DESENHAR MAPA
-// ======================================
+            if(!isNaN(valor) && valor > 0)
+                valores.push(valor);
 
-function atualizarMapa(){
+        });
 
-    if(!geojsonData)
-        return;
-
-    if(camadaUBS){
-
-        map.removeLayer(
-            camadaUBS
+        valores.sort(
+            (a,b)=>a-b
         );
 
+        return {
+
+            q1:
+            valores[
+                Math.floor(
+                    valores.length * 0.25
+                )
+            ],
+
+            q2:
+            valores[
+                Math.floor(
+                    valores.length * 0.50
+                )
+            ],
+
+            q3:
+            valores[
+                Math.floor(
+                    valores.length * 0.75
+                )
+            ]
+
+        };
+
     }
 
-    const numerico =
-        ehNumerico(
-            indicadorAtual
-        );
+    function getColorAbandono(valor, quartisPositivos){
 
-    const quartis =
-        numerico
-        ? calcularQuartis(
-            indicadorAtual
-        )
-        : null;
+        valor =
+            parseFloat(
+                String(valor)
+                .replace(",",".")
+            );
 
-    camadaUBS =
-    L.geoJSON(
-        geojsonData,
-        {
+        if(isNaN(valor))
+            return '#cccccc';
 
-            style:function(feature){
+        // ponto de corte: aqui é onde a cor muda de fato
+        if(valor <= 0)
+            return COR_SEM_ABANDONO;
 
-                const nome =
-                    feature.properties.Name;
+        if(!quartisPositivos)
+            return ESCALA_VERMELHA[0];
 
-                const dado =
-                    indicadores[nome];
+        return valor <= quartisPositivos.q1
+            ? ESCALA_VERMELHA[0]  // vermelho muito claro
+            : valor <= quartisPositivos.q2
+            ? ESCALA_VERMELHA[1]  // vermelho claro
+            : valor <= quartisPositivos.q3
+            ? ESCALA_VERMELHA[2]  // vermelho médio
+            : ESCALA_VERMELHA[3]; // vermelho escuro
 
-                if(!dado){
+    }
+
+    // Score 1-3: mapeamento direto, 3 é sempre o mais vermelho
+    const CORES_SCORE = {
+        '1': ESCALA_VERMELHA[0],
+        '2': ESCALA_VERMELHA[2],
+        '3': ESCALA_VERMELHA[3]
+    };
+
+    function getColorScore(valor){
+
+        const chave =
+            String(valor).trim();
+
+        return CORES_SCORE[chave]
+            || '#cccccc';
+
+    }
+
+    // ======================================
+    // FAIXA ETÁRIA: escala sequencial ordenada pela idade
+    // (mais tons do que a paleta categórica genérica)
+    // ======================================
+
+    const ORDEM_FAIXA_ETARIA = [
+        '5-9','10-14','15-19','20-24','25-29',
+        '30-34','35-39','40-44','45-49','50-54',
+        '55-59','60-64'
+    ];
+
+    const ESCALA_FAIXA_ETARIA = [
+        '#fff7fb','#ece7f2','#d0d1e6','#a6bddb',
+        '#74a9cf','#3690c0','#0570b0','#045a8d',
+        '#023858','#011830','#000c18','#000000'
+    ];
+
+    function getColorFaixaEtaria(valor){
+
+        const indice =
+            ORDEM_FAIXA_ETARIA.indexOf(valor);
+
+        if(indice === -1)
+            return '#cccccc';
+
+        return ESCALA_FAIXA_ETARIA[
+            indice % ESCALA_FAIXA_ETARIA.length
+        ];
+
+    }
+
+    // ======================================
+    // CORES CATEGÓRICAS GENÉRICAS (ex: Distrito)
+    // ======================================
+
+    function getColorCategoria(valor){
+
+        const categorias =
+
+            [...new Set(
+
+                Object.values(indicadores)
+                .map(
+                    d => d[indicadorAtual]
+                )
+
+            )];
+
+        const paleta = [
+        '#1f78b4','#33a02c','#e31a1c','#ff7f00','#6a3d9a',
+        '#a6cee3','#b2df8a','#fb9a99','#fdbf6f','#cab2d6',
+        '#ffff99','#b15928'
+    ];
+
+        const indice =
+            categorias.indexOf(valor);
+
+        return paleta[
+            indice % paleta.length
+        ];
+
+    }
+
+    // ======================================
+    // ROTEADOR DE COR: decide qual escala usar
+    // de acordo com o indicador selecionado
+    // ======================================
+
+    function obterCor(dado){
+
+        const valor =
+            dado[indicadorAtual];
+
+        if(INDICADORES_SCORE.includes(indicadorAtual)){
+            return getColorScore(valor);
+        }
+
+        if(indicadorAtual === INDICADOR_ABANDONO){
+            return getColorAbandono(valor, quartisAbandonoAtual);
+        }
+
+        if(indicadorAtual === INDICADOR_FAIXA_ETARIA){
+            return getColorFaixaEtaria(valor);
+        }
+
+        if(ehNumerico(indicadorAtual)){
+            return getColorQuartil(valor, quartisAtual);
+        }
+
+        return getColorCategoria(valor);
+
+    }
+
+    // ======================================
+    // LEGENDA
+    // ======================================
+
+    function atualizarLegenda(){
+
+        let html = '';
+
+        if(indicadorAtual === INDICADOR_ABANDONO){
+
+            html += '<b>Abandono vacinal</b><br>';
+
+            html +=
+                '<div class="item-legenda"><span class="cor" style="background:' +
+                COR_SEM_ABANDONO + '"></span>≤ 0 (sem abandono)</div>';
+
+            const rotulos =
+                quartisAbandonoAtual
+                ? [
+                    '≤ ' + quartisAbandonoAtual.q1.toFixed(2),
+                    quartisAbandonoAtual.q1.toFixed(2) + ' – ' + quartisAbandonoAtual.q2.toFixed(2),
+                    quartisAbandonoAtual.q2.toFixed(2) + ' – ' + quartisAbandonoAtual.q3.toFixed(2),
+                    '> ' + quartisAbandonoAtual.q3.toFixed(2)
+                ]
+                : ['vermelho muito claro','vermelho claro','vermelho médio','vermelho escuro'];
+
+            ESCALA_VERMELHA.forEach((cor, i) => {
+                html +=
+                    '<div class="item-legenda"><span class="cor" style="background:' +
+                    cor + '"></span>' + rotulos[i] + '</div>';
+            });
+
+        }
+
+        else if(INDICADORES_SCORE.includes(indicadorAtual)){
+
+            html += '<b>Score (1 melhor, 3 pior)</b><br>';
+
+            html += '<div class="item-legenda"><span class="cor" style="background:' + CORES_SCORE['1'] + '"></span>1 - melhor</div>';
+            html += '<div class="item-legenda"><span class="cor" style="background:' + CORES_SCORE['2'] + '"></span>2</div>';
+            html += '<div class="item-legenda"><span class="cor" style="background:' + CORES_SCORE['3'] + '"></span>3 - pior</div>';
+
+        }
+
+        else if(indicadorAtual === INDICADOR_FAIXA_ETARIA){
+
+            html += '<b>Faixa etária predominante</b><br>';
+
+            const presentes =
+                ORDEM_FAIXA_ETARIA.filter(
+                    faixa => Object.values(indicadores)
+                        .some(d => d[indicadorAtual] === faixa)
+                );
+
+            presentes.forEach(faixa => {
+                html +=
+                    '<div class="item-legenda"><span class="cor" style="background:' +
+                    getColorFaixaEtaria(faixa) + '"></span>' + faixa + '</div>';
+            });
+
+        }
+
+        else if(ehNumerico(indicadorAtual)){
+
+            html += '<b>Escala por quartis</b><br>';
+            html += '<div class="item-legenda"><span class="cor" style="background:#ffffcc"></span>1º quartil</div>';
+            html += '<div class="item-legenda"><span class="cor" style="background:#a1dab4"></span>2º quartil</div>';
+            html += '<div class="item-legenda"><span class="cor" style="background:#41b6c4"></span>3º quartil</div>';
+            html += '<div class="item-legenda"><span class="cor" style="background:#225ea8"></span>4º quartil</div>';
+
+        }
+
+        else{
+
+            html += '<b>Categorias</b><br>';
+
+            const categorias =
+                [...new Set(
+                    Object.values(indicadores)
+                    .map(d => d[indicadorAtual])
+                    .filter(Boolean)
+                )];
+
+            categorias.forEach(c => {
+                html +=
+                    '<div class="item-legenda"><span class="cor" style="background:' +
+                    getColorCategoria(c) + '"></span>' + c + '</div>';
+            });
+
+        }
+
+        document
+        .getElementById('legenda')
+        .innerHTML = html;
+
+    }
+
+    // ======================================
+    // DESENHAR MAPA
+    // ======================================
+
+    function atualizarMapa(){
+
+        if(!geojsonData)
+            return;
+
+        if(camadaUBS){
+
+            map.removeLayer(
+                camadaUBS
+            );
+
+        }
+
+        const precisaQuartis =
+            ehNumerico(indicadorAtual) &&
+            indicadorAtual !== INDICADOR_ABANDONO &&
+            !INDICADORES_SCORE.includes(indicadorAtual);
+
+        quartisAtual =
+            precisaQuartis
+            ? calcularQuartis(indicadorAtual)
+            : null;
+
+        quartisAbandonoAtual =
+            indicadorAtual === INDICADOR_ABANDONO
+            ? calcularQuartisPositivos(indicadorAtual)
+            : null;
+
+        camadaUBS =
+        L.geoJSON(
+            geojsonData,
+            {
+
+                style:function(feature){
+
+                    const nome =
+                        feature.properties.Name;
+
+                    const dado =
+                        indicadores[nome];
+
+                    if(!dado){
+
+                        return {
+
+                            fillColor:'#cccccc',
+
+                            fillOpacity:0.5,
+
+                            color:'#333',
+
+                            weight:1
+
+                        };
+
+                    }
 
                     return {
 
-                        fillColor:'#cccccc',
+                        fillColor: obterCor(dado),
 
-                        fillOpacity:0.5,
+                        fillOpacity:0.7,
 
                         color:'#333',
 
@@ -407,279 +640,231 @@ function atualizarMapa(){
 
                     };
 
-                }
+                },
 
-                let cor;
-
-               // Indicadores numéricos
-                if(numerico){
-                    cor =
-                    getColorQuartil(
-                        dado[indicadorAtual],
-                        quartis
-                    );
-                }
-                if(
-                    indicadorAtual === 'DadosAPS_A' ||
-                    indicadorAtual === 'DadosAPS_S' ||
-                    indicadorAtual === 'DadosAPS_E'
+                onEachFeature:function(
+                    feature,
+                    layer
                 ){
-                    cor =
-                    getColorAPS(
-                        dado[indicadorAtual]
-                    );
-                }
-                // Indicadores numéricos
-                else if(numerico){
-                    cor =
-                    getColorQuartil(
-                        dado[indicadorAtual],
-                        quartis
-                    );
-                }
-                // Qualquer variável categórica
-                else{
-                    cor =
-                    getColorCategoria(
-                        dado[indicadorAtual]
-                    );
-                }           return {
 
-                    fillColor:cor,
+                    const nome =
+                        feature.properties.Name;
 
-                    fillOpacity:0.7,
+                    const dado =
+                        indicadores[nome];
 
-                    color:'#333',
+                    if(!dado)
+                        return;
 
-                    weight:1
-
-                };
-
-            },
-
-            onEachFeature:function(
-                feature,
-                layer
-            ){
-
-                const nome =
-                    feature.properties.Name;
-
-                const dado =
-                    indicadores[nome];
-
-                if(!dado)
-                    return;
-
-                let popup =
-                    '<b>' +
-                    nome +
-                    '</b><hr>';
-
-                Object.keys(
-                    dado
-                ).forEach(
-                    campo => {
-
-                        popup +=
-
+                    let popup =
                         '<b>' +
+                        nome +
+                        '</b><hr>';
 
-                        campo +
+                    Object.keys(
+                        dado
+                    ).forEach(
+                        campo => {
 
-                        '</b>: ' +
+                            popup +=
 
-                        dado[campo] +
+                            '<b>' +
 
-                        '<br>';
+                            campo +
 
-                    }
-                );
+                            '</b>: ' +
 
-                layer.bindPopup(
-                    popup
-                );
+                            dado[campo] +
+
+                            '<br>';
+
+                        }
+                    );
+
+                    layer.bindPopup(
+                        popup
+                    );
+
+                }
 
             }
-
-        }
-    );
-
-    camadaUBS.addTo(
-        map
-    );
-
-    atualizarLegenda();
-
-}
-
-// ======================================
-// GERAR SELETOR
-// ======================================
-
-function gerarSeletor(){
-
-    const select =
-    document.getElementById(
-        'indicador'
-    );
-
-    select.innerHTML =
-    '';
-
-    const colunas =
-        Object.keys(
-            Object.values(
-                indicadores
-            )[0]
         );
 
-    colunas.forEach(
-        coluna => {
-
-        if(
-            coluna === 'Name'
-        )
-            return;
-
-        const option =
-        document.createElement(
-            'option'
+        camadaUBS.addTo(
+            map
         );
 
-        option.value =
-        coluna;
+        atualizarLegenda();
 
-        option.textContent =
-        coluna;
+    }
 
-        select.appendChild(
-            option
+    // ======================================
+    // GERAR SELETOR
+    // ======================================
+
+    function gerarSeletor(){
+
+        const select =
+        document.getElementById(
+            'indicador'
         );
 
-    });
+        select.innerHTML =
+        '';
 
-    indicadorAtual =
-        colunas.find(
-            c => c !== 'Name'
-        );
+        const colunas =
+            Object.keys(
+                Object.values(
+                    indicadores
+                )[0]
+            );
 
-    select.value =
-        indicadorAtual;
-
-    select.onchange =
-    function(){
-
-        indicadorAtual =
-            this.value;
-
-        atualizarMapa();
-
-    };
-
-}
-
-// ======================================
-// CARREGAR DADOS DO SHEETS
-// ======================================
-
-function carregarDados(){
-
-    Papa.parse(
-
-        csvUrl +
-        '&t=' +
-        Date.now(),
-
-        {
-
-        download:true,
-
-        header:true,
-
-        complete:function(results){
-
-            indicadores = {};
-
-            results.data.forEach(row => {
-
-                if(row.Name){
-
-                    indicadores[
-                        row.Name
-                    ] = row;
-
-                }
-
-            });
+        colunas.forEach(
+            coluna => {
 
             if(
-                !indicadorAtual
-            ){
+                coluna === 'Name'
+            )
+                return;
 
-                gerarSeletor();
+            const option =
+            document.createElement(
+                'option'
+            );
 
-            }
+            option.value =
+            coluna;
+
+            option.textContent =
+            coluna;
+
+            select.appendChild(
+                option
+            );
+
+        });
+
+        indicadorAtual =
+            colunas.find(
+                c => c !== 'Name'
+            );
+
+        select.value =
+            indicadorAtual;
+
+        select.onchange =
+        function(){
+
+            indicadorAtual =
+                this.value;
 
             atualizarMapa();
 
-            console.log(
-                'Dados atualizados:',
-                new Date()
-            );
+        };
 
-        }
+    }
 
-    });
+    // ======================================
+    // CARREGAR DADOS DO SHEETS
+    // ======================================
 
-}
+    function carregarDados(){
 
-// ======================================
-// CARREGAR GEOJSON
-// ======================================
+        Papa.parse(
 
-fetch(
-    geojsonUrl
-)
+            csvUrl +
+            '&t=' +
+            Date.now(),
 
-.then(
-response =>
-response.json()
-)
+            {
 
-.then(
-geojson => {
+            download:true,
 
-    geojsonData =
-        geojson;
+            header:true,
 
-    carregarDados();
+            complete:function(results){
 
-}
-)
+                indicadores = {};
 
-.catch(
-erro => {
+                results.data.forEach(row => {
 
-    console.error(
-        'Erro GeoJSON:',
-        erro
+                    if(row.Name){
+
+                        indicadores[
+                            row.Name
+                        ] = row;
+
+                    }
+
+                });
+
+                if(
+                    !indicadorAtual
+                ){
+
+                    gerarSeletor();
+
+                }
+
+                atualizarMapa();
+
+                console.log(
+                    'Dados atualizados:',
+                    new Date()
+                );
+
+            }
+
+        });
+
+    }
+
+    // ======================================
+    // CARREGAR GEOJSON
+    // ======================================
+
+    fetch(
+        geojsonUrl
+    )
+
+    .then(
+    response =>
+    response.json()
+    )
+
+    .then(
+    geojson => {
+
+        geojsonData =
+            geojson;
+
+        carregarDados();
+
+    }
+    )
+
+    .catch(
+    erro => {
+
+        console.error(
+            'Erro GeoJSON:',
+            erro
+        );
+
+    }
     );
 
-}
-);
+    // ======================================
+    // ATUALIZAÇÃO AUTOMÁTICA
+    // ======================================
 
-// ======================================
-// ATUALIZAÇÃO AUTOMÁTICA
-// ======================================
+    setInterval(
+        carregarDados,
+        60000
+    );
 
-setInterval(
-    carregarDados,
-    60000
-);
+    </script>
 
-</script>
+    </body>
 
-</body>
-
-</html>
+    </html>
