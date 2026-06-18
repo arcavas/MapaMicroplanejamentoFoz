@@ -279,6 +279,35 @@ function getColorAPS(valor){
         return '#91bfdb';
 
     return '#1a9850';
+
+} // <-- ESTA CHAVE ESTÁ FALTANDO
+
+function getColorAbandono(valor){
+
+    valor =
+        parseFloat(
+            String(valor)
+            .replace(",",".")
+        );
+
+    if(isNaN(valor))
+        return '#cccccc';
+
+    if(valor <= -20)
+        return '#fee5d9';
+
+    if(valor <= -10)
+        return '#fcbba1';
+
+    if(valor <= 0)
+        return '#fb6a4a';
+
+    if(valor <= 10)
+        return '#de2d26';
+
+    return '#a50f15';
+
+}
 function getColorAbandono(valor){
 
     valor =
