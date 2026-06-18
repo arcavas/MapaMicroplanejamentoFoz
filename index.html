@@ -280,88 +280,6 @@ function getColorAPS(valor){
 
     return '#1a9850';
 
-} // <-- ESTA CHAVE ESTÁ FALTANDO
-
-function getColorAbandono(valor){
-
-    valor =
-        parseFloat(
-            String(valor)
-            .replace(",",".")
-        );
-
-    if(isNaN(valor))
-        return '#cccccc';
-
-    if(valor <= -20)
-        return '#fee5d9';
-
-    if(valor <= -10)
-        return '#fcbba1';
-
-    if(valor <= 0)
-        return '#fb6a4a';
-
-    if(valor <= 10)
-        return '#de2d26';
-
-    return '#a50f15';
-
-}
-function getColorAbandono(valor){
-
-    valor =
-        parseFloat(
-            String(valor)
-            .replace(",",".")
-        );
-
-    if(isNaN(valor))
-        return '#cccccc';
-
-    if(valor <= -20)
-        return '#fee5d9';
-
-    if(valor <= -10)
-        return '#fcbba1';
-
-    if(valor <= 0)
-        return '#fb6a4a';
-
-    if(valor <= 10)
-        return '#de2d26';
-
-    return '#a50f15';
-
-}
-
-// ======================================
-// SCORES 1-3
-// ======================================
-
-function getColorScore(valor){
-
-    valor =
-        parseFloat(
-            String(valor)
-            .replace(",",".")
-        );
-
-    if(isNaN(valor))
-        return '#cccccc';
-
-    if(valor == 1)
-        return '#fcbba1';
-
-    if(valor == 2)
-        return '#fb6a4a';
-
-    if(valor == 3)
-        return '#a50f15';
-
-    return '#cccccc';
-
-}
 }
 // ======================================
 // CORES CATEGÓRICAS
@@ -415,29 +333,6 @@ function atualizarLegenda(){
 
     }
 
-    else if(
-        indicadorAtual === 'Abandono Vacinal'
-    ){
-
-        html += '<div class="item-legenda"><span class="cor" style="background:#fee5d9"></span>≤ -20</div>';
-        html += '<div class="item-legenda"><span class="cor" style="background:#fcbba1"></span>-20 a -10</div>';
-        html += '<div class="item-legenda"><span class="cor" style="background:#fb6a4a"></span>-10 a 0</div>';
-        html += '<div class="item-legenda"><span class="cor" style="background:#de2d26"></span>0 a 10</div>';
-        html += '<div class="item-legenda"><span class="cor" style="background:#a50f15"></span>> 10</div>';
-
-    }
-
-    else if(
-        indicadorAtual === 'Score Taxa de Abandono' ||
-        indicadorAtual === 'Score Bolsa Família'
-    ){
-
-        html += '<div class="item-legenda"><span class="cor" style="background:#fcbba1"></span>Score 1</div>';
-        html += '<div class="item-legenda"><span class="cor" style="background:#fb6a4a"></span>Score 2</div>';
-        html += '<div class="item-legenda"><span class="cor" style="background:#a50f15"></span>Score 3</div>';
-
-    }
-
     else if(indicadorAtual === 'DadosAPS_F'){
 
         html = 'Faixas etárias';
@@ -455,6 +350,7 @@ function atualizarLegenda(){
     .innerHTML = html;
 
 }
+
 // ======================================
 // DESENHAR MAPA
 // ======================================
@@ -513,68 +409,41 @@ function atualizarMapa(){
 
                 }
 
-              let cor;
+                let cor;
 
-// Indicadores APS
-if(
-    indicadorAtual === 'DadosAPS_A' ||
-    indicadorAtual === 'DadosAPS_S' ||
-    indicadorAtual === 'DadosAPS_E'
-){
-
-    cor =
-    getColorAPS(
-        dado[indicadorAtual]
-    );
-
-}
-
-// Abandono Vacinal
-else if(
-    indicadorAtual === 'Abandono Vacinal'
-){
-
-    cor =
-    getColorAbandono(
-        dado[indicadorAtual]
-    );
-
-}
-
-// Scores
-else if(
-    indicadorAtual === 'Score Taxa de Abandono' ||
-    indicadorAtual === 'Score Bolsa Família'
-){
-
-    cor =
-    getColorScore(
-        dado[indicadorAtual]
-    );
-
-}
-
-// Indicadores numéricos gerais
-else if(numerico){
-
-    cor =
-    getColorQuartil(
-        dado[indicadorAtual],
-        quartis
-    );
-
-}
-
-// Variáveis categóricas
-else{
-
-    cor =
-    getColorCategoria(
-        dado[indicadorAtual]
-    );
-
-}
-                         return {
+               // Indicadores numéricos
+                if(numerico){
+                    cor =
+                    getColorQuartil(
+                        dado[indicadorAtual],
+                        quartis
+                    );
+                }
+                if(
+                    indicadorAtual === 'DadosAPS_A' ||
+                    indicadorAtual === 'DadosAPS_S' ||
+                    indicadorAtual === 'DadosAPS_E'
+                ){
+                    cor =
+                    getColorAPS(
+                        dado[indicadorAtual]
+                    );
+                }
+                // Indicadores numéricos
+                else if(numerico){
+                    cor =
+                    getColorQuartil(
+                        dado[indicadorAtual],
+                        quartis
+                    );
+                }
+                // Qualquer variável categórica
+                else{
+                    cor =
+                    getColorCategoria(
+                        dado[indicadorAtual]
+                    );
+                }           return {
 
                     fillColor:cor,
 
