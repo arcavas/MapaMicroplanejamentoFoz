@@ -127,6 +127,14 @@
     const INDICADOR_FAIXA_ETARIA = 'Faixa etária';
     const INDICADORES_SCORE = ['Score Taxa de Abandono', 'Score Bolsa Família'];
 
+    // Qualquer coluna cujo nome comece com "Cobertura" (ex: "Cobertura 2024",
+    // "Cobertura 2025") usa a escala fixa de cobertura vacinal
+    function ehIndicadorCobertura(indicador){
+        return /^cobertura/i.test(
+            String(indicador).trim()
+        );
+    }
+
     // ======================================
     // MAPA
     // ======================================
@@ -409,6 +417,42 @@
     }
 
     // ======================================
+    // COBERTURA VACINAL: classes fixas (não são quartis)
+    // 0 – 0,700 | 0,700 – 0,85 | 0,85 – 0,95 | 0,95 – 1 | 1 – 1,39
+    // ======================================
+
+    const CLASSES_COBERTURA = [
+        { max: 0.700, cor: '#d73027', rotulo: '0 – 0,700'      },
+        { max: 0.85,  cor: '#fc8d59', rotulo: '0,700 – 0,85'   },
+        { max: 0.95,  cor: '#fee08b', rotulo: '0,85 – 0,95'    },
+        { max: 1,     cor: '#91cf60', rotulo: '0,95 – 1'       },
+        { max: 1.39,  cor: '#1a9850', rotulo: '1 – 1,39'       }
+    ];
+
+    function getColorCobertura(valor){
+
+        valor =
+            parseFloat(
+                String(valor)
+                .replace(",",".")
+            );
+
+        if(isNaN(valor))
+            return '#cccccc';
+
+        for(const classe of CLASSES_COBERTURA){
+            if(valor <= classe.max)
+                return classe.cor;
+        }
+
+        // acima de 1.39, mantém a cor da última classe
+        return CLASSES_COBERTURA[
+            CLASSES_COBERTURA.length - 1
+        ].cor;
+
+    }
+
+    // ======================================
     // CORES CATEGÓRICAS GENÉRICAS (ex: Distrito)
     // ======================================
 
@@ -450,6 +494,10 @@
         const valor =
             dado[indicadorAtual];
 
+        if(ehIndicadorCobertura(indicadorAtual)){
+            return getColorCobertura(valor);
+        }
+
         if(INDICADORES_SCORE.includes(indicadorAtual)){
             return getColorScore(valor);
         }
@@ -478,7 +526,19 @@
 
         let html = '';
 
-        if(indicadorAtual === INDICADOR_ABANDONO){
+        if(ehIndicadorCobertura(indicadorAtual)){
+
+            html += '<b>Cobertura vacinal</b><br>';
+
+            CLASSES_COBERTURA.forEach(classe => {
+                html +=
+                    '<div class="item-legenda"><span class="cor" style="background:' +
+                    classe.cor + '"></span>' + classe.rotulo + '</div>';
+            });
+
+        }
+
+        else if(indicadorAtual === INDICADOR_ABANDONO){
 
             html += '<b>Abandono vacinal</b><br>';
 
@@ -587,6 +647,7 @@
         const precisaQuartis =
             ehNumerico(indicadorAtual) &&
             indicadorAtual !== INDICADOR_ABANDONO &&
+            !ehIndicadorCobertura(indicadorAtual) &&
             !INDICADORES_SCORE.includes(indicadorAtual);
 
         quartisAtual =
